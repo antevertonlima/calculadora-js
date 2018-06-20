@@ -4,6 +4,8 @@ class CalcController {
         this._locale        = "pt-BR";
         this._lastOperator  = '';
         this._lastNumber    = '';
+        this._audioOnOff    = false;
+        this._audio         = new Audio('click.mp3');
         this._operation     = [];
         this._dateCalcEl    = document.querySelector("#data");
         this._timeCalcEl    = document.querySelector("#hora");
@@ -14,16 +16,59 @@ class CalcController {
         this.initKeyBoard();
     }
 
+    copyToClipBoard(){
+        //criando elemento
+        let input  = document.createElement('input');
+        input.value = this.displayCalc;
+        document.body.appendChild(input);
+
+        //copiar valor
+        input.select();
+        document.execCommand("Copy");
+
+        //remover input
+        input.remove();
+    }
+
+    pasteFromClipboard(){
+        document.addEventListener('paste', e => {
+            let text = e.clipboardData.getData('Text');
+            this.displayCalc = parseFloat(text);
+        });
+    }
+
     initialize(){
         this.setDisplayDateTime();
         let intervalDateTime = setInterval(()=> {
             this.setDisplayDateTime();
         }, 1000);
         this.setLastNumberToDisplay();
+        this.pasteFromClipboard();
+        document.querySelectorAll('.btn-ac').forEach(btn => {
+            btn.addEventListener('dblclick', e => {
+                this.toggleAudio();
+            });
+        });
+    }
+
+    toggleAudio(){
+        this._audioOnOff = !this._audioOnOff;        
+    }
+
+    playAudio(){
+        if (this._audioOnOff) {
+            this._audio.currentTime = 0;
+            this._audio.play();
+        }
     }
 
     initKeyBoard(){
         document.addEventListener('keyup', e => {
+            switch (e.key) {
+                case 'c':
+                    if (e.ctrlKey || e.metaKey) this.copyToClipBoard();
+                    break;
+            }          
             this.execBtn(e.key);
         });
     }
@@ -88,7 +133,14 @@ class CalcController {
     }
 
     getResult(){
-        return eval(this._operation.join(""));
+        try {
+            return eval(this._operation.join(""));
+        } catch (e) {
+            console.log(e);
+            setTimeout(()=>{
+                this.setError();
+            },1);
+        }        
     }
 
     calc(){
@@ -159,6 +211,7 @@ class CalcController {
     }
 
     execBtn(value){
+        this.playAudio();
         switch (value) {
             case 'ac':
             case 'Escape':
@@ -256,6 +309,10 @@ class CalcController {
     }
 
     set displayCalc(value){
+        if (value.toString().length > 10) {
+            this.setError();
+            return false;
+        }
         this._displayCalcEl.innerHTML = value;
     }
 
